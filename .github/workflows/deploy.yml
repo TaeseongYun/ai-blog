@@ -20,6 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: withastro/action@v3   # install + build + upload Pages artifact
+        with:
+          node-version: 22   # Astro는 Node >=22.12 필요 (액션 기본값 20이라 명시)
 
   deploy:
     needs: build
