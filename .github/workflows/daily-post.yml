@@ -1,0 +1,41 @@
+name: Daily dev-post draft
+
+on:
+  schedule:
+    - cron: '30 7 * * 1-5'   # 07:30 UTC = 16:30 KST, 월~금 (주말 제외)
+  workflow_dispatch:          # 수동 실행 가능
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  curate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Generate draft (skips on KR holidays)
+        id: gen
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: node tools/curate.mjs
+
+      - name: Open PR (draft = review before publish)
+        if: steps.gen.outputs.created == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: auto/daily-post
+          delete-branch: true
+          add-paths: src/content/blog/*.md
+          commit-message: "post: 오늘의 개발글 큐레이션 초안"
+          title: "📝 ${{ steps.gen.outputs.title }}"
+          body: |
+            자동 생성된 개발글 큐레이션 초안입니다.
+            검토·수정 후 **머지하면 발행**됩니다. (머지 안 하면 발행 안 됨)
