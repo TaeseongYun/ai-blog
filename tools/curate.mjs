@@ -9,6 +9,7 @@
 //   node tools/curate.mjs --dry                        # 수집만(제미나이 호출 X)
 //   node tools/curate.mjs --selftest                   # 로직 자체검증(네트워크/키 불필요)
 //   node tools/curate.mjs --force                      # 공휴일이어도 진행(테스트용)
+//   POST_DATE=2026-08-03 node tools/curate.mjs          # 백필: 파일명·pubDate·공휴일 판정을 그 날짜로
 
 import { writeFileSync, mkdirSync, appendFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -38,6 +39,15 @@ function isKrPublicHoliday(date) {
   return Array.isArray(res) && res.some((h) => h.type === 'public');
 }
 
+// --- 기준 날짜: POST_DATE=YYYY-MM-DD 오버라이드(백필용), 없으면 지금. 03:00 UTC=12:00 KST로 잡아 tz 경계 안전 ---
+function baseDateFrom(env) {
+  return env.POST_DATE ? new Date(`${env.POST_DATE}T03:00:00Z`) : new Date();
+}
+// --- KST 기준 YYYY-MM-DD 문자열 ---
+function ymdKST(d) {
+  return new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Seoul' })).toISOString().slice(0, 10);
+}
+
 // --- 자체검증 ---
 function selftest() {
   const rss = `<rss><channel>
@@ -53,6 +63,8 @@ function selftest() {
   // 광복절(8/15)은 공휴일, 8/12는 아님 (KR 정오로 판정)
   console.assert(isKrPublicHoliday(new Date('2026-08-15T03:00:00Z')) === true, '광복절 미탐지');
   console.assert(isKrPublicHoliday(new Date('2026-08-12T03:00:00Z')) === false, '평일 오탐');
+  // POST_DATE 오버라이드가 판정/저장 날짜로 그대로 흘러가는지
+  console.assert(ymdKST(baseDateFrom({ POST_DATE: '2026-08-03' })) === '2026-08-03', 'POST_DATE 오버라이드 실패');
   console.log('✅ selftest 통과');
 }
 
@@ -90,7 +102,8 @@ async function gemini(prompt) {
 async function main() {
   if (has('--selftest')) { selftest(); return; }
 
-  if (!has('--force') && isKrPublicHoliday(new Date())) {
+  const baseDate = baseDateFrom(process.env);
+  if (!has('--force') && isKrPublicHoliday(baseDate)) {
     console.log('오늘은 한국 공휴일 — 포스트 생성 건너뜀.');
     return; // 파일 미생성 → 워크플로우가 PR 안 만듦
   }
@@ -125,8 +138,7 @@ ${list}`;
   let body = await gemini(prompt);
 
   // Astro blog 스키마(title/description/pubDate)에 맞춰 저장
-  const today = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Seoul' }))
-    .toISOString().slice(0, 10);
+  const today = ymdKST(baseDate);
   const titleMatch = body.match(/^#\s+(.+)$/m);
   const title = (titleMatch?.[1] || `오늘의 개발글 (${today})`).trim();
   body = body.replace(/^#\s+.+$\r?\n?/m, '').trim();

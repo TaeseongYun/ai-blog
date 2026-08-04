@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '30 7 * * 1-5'   # 07:30 UTC = 16:30 KST, 월~금 (주말 제외)
   workflow_dispatch:          # 수동 실행 가능
+    inputs:
+      post_date:
+        description: '백필 날짜 YYYY-MM-DD (비우면 오늘)'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -25,6 +30,7 @@ jobs:
         id: gen
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          POST_DATE: ${{ inputs.post_date }}
         run: node tools/curate.mjs
 
       - name: Open PR (draft = review before publish)
