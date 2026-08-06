@@ -19,7 +19,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = join(__dirname, '..', 'src', 'content', 'blog');
 const argv = process.argv.slice(2);
 const has = (f) => argv.includes(f);
-const MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+// Google이 최신 flash를 가리키도록 유지하는 롤링 별칭 → 모델 퇴역 시 자동 추종(수동 관리 불필요)
+const MODEL = process.env.GEMINI_MODEL || 'gemini-flash-latest';
 
 // --- 피드 파서: RSS(<item>/<link>text) + Atom(<entry>/<link href>) 둘 다 (XML 파서 dep 불필요) ---
 function parseRss(xml) {
