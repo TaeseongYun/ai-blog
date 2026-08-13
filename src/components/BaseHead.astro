@@ -15,20 +15,23 @@ interface Props {
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
+// GitHub Pages 프로젝트 사이트(base: '/ai-blog') 아래에서도 정적 파일이 깨지지 않게
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 const { title, description, image = FallbackImage } = Astro.props;
 ---
 
 <!-- Global Metadata -->
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="icon" href="/favicon.ico" />
-<link rel="sitemap" href="/sitemap-index.xml" />
+<link rel="icon" type="image/svg+xml" href={`${base}/favicon.svg`} />
+<link rel="icon" href={`${base}/favicon.ico`} />
+<link rel="sitemap" href={`${base}/sitemap-index.xml`} />
 <link
 	rel="alternate"
 	type="application/rss+xml"
 	title={SITE_TITLE}
-	href={new URL('rss.xml', Astro.site)}
+	href={`${base}/rss.xml`}
 />
 <meta name="generator" content={Astro.generator} />
 
