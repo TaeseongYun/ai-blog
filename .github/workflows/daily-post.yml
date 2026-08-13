@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  actions: write   # 머지 후 deploy 워크플로를 직접 실행하기 위해 필요
 
 jobs:
   curate:
@@ -27,8 +28,9 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: node tools/curate.mjs
 
-      - name: Open PR (draft = review before publish)
+      - name: Open PR
         if: steps.gen.outputs.created == 'true'
+        id: pr
         uses: peter-evans/create-pull-request@v8
         with:
           branch: auto/daily-post
@@ -37,5 +39,16 @@ jobs:
           commit-message: "post: 오늘의 개발글 큐레이션 초안"
           title: "📝 ${{ steps.gen.outputs.title }}"
           body: |
-            자동 생성된 개발글 큐레이션 초안입니다.
-            검토·수정 후 **머지하면 발행**됩니다. (머지 안 하면 발행 안 됨)
+            자동 생성된 개발글 큐레이션입니다.
+            PR이 정상 생성되면 자동으로 머지되어 발행됩니다.
+
+      - name: Auto-merge & deploy
+        if: steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sleep 5   # PR 생성 직후 mergeability 계산 대기
+          gh pr merge "${{ steps.pr.outputs.pull-request-number }}" --merge --delete-branch
+          # GITHUB_TOKEN으로 머지된 push는 다른 워크플로를 트리거하지 않으므로
+          # (workflow_dispatch는 예외) 배포를 직접 실행한다
+          gh workflow run deploy.yml --ref main
