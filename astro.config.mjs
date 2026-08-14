@@ -5,10 +5,15 @@ import sitemap from '@astrojs/sitemap';
 import { defineConfig, fontProviders } from 'astro/config';
 
 // https://astro.build/config
+// TaeseongYun/ai-blog → GitHub Pages 프로젝트 사이트
+const base = '/ai-blog';
+
 export default defineConfig({
-	// TaeseongYun/ai-blog → GitHub Pages 프로젝트 사이트
 	site: 'https://taeseongyun.github.io',
-	base: '/ai-blog',
+	base,
+	// 홈이 곧 글 목록이므로 기존 /blog 목록 주소는 홈으로 보낸다
+	// (redirect 목적지에는 Astro가 base를 붙여주지 않아 직접 포함)
+	redirects: { '/blog': `${base}/` },
 	integrations: [mdx(), sitemap()],
 	fonts: [
 		{
